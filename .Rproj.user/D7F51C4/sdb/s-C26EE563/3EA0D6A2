@@ -1,0 +1,29 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1474079941554.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "3EA0D6A2",
+    "lastKnownWriteTime" : 0,
+    "last_content_update" : 1474079941554,
+    "path" : null,
+    "project_path" : null,
+    "properties" : {
+        "cacheKey" : "3942F730",
+        "caption" : "pci",
+        "contentUrl" : "grid_resource/gridviewer.html?env=&obj=pci&cache_key=3942F730",
+        "displayedObservations" : 184,
+        "environment" : "",
+        "object" : "pci",
+        "preview" : 0,
+        "totalObservations" : 184,
+        "variables" : 94
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_dataframe"
+}
