@@ -20,7 +20,7 @@ pce_us <- pce %>%
   gather(Year, Expenditures, `1997`:`2014`) %>%
   select(Year, Expenditures)
 
-# create tidy state-level incomes
+# create tidy national-level incomes
 pci_us <- pci %>%
   filter(Description == "Per capita personal income (dollars) 2/",
          GeoName == "United States") %>%
@@ -37,6 +37,13 @@ savings_us <- pce_us %>%
 ggplot(savings_us, aes(Year, Savings_Rate, group = 1)) +
   geom_line() +
   scale_y_continuous(labels = scales::percent, limits = c(0, .23))
+
+# ribbon visualization
+ggplot(savings_us, aes(Year)) +
+  geom_line(aes(y = Income, group = 1), color = "darkseagreen4") +
+  geom_line(aes(y = Expenditures, group = 1), color = "firebrick3") +
+  geom_ribbon(aes(ymin = Expenditures, ymax = Income, group = 1), fill = "darkseagreen1", alpha = .5) +
+  theme_minimal()
 
 
 #######################

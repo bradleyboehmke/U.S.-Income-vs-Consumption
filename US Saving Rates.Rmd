@@ -1,0 +1,164 @@
+---
+title: "R Notebook"
+output:
+  html_document: default
+  html_notebook: default
+---
+
+## Synopsis
+
+Per capita income and expenditures provide crucial insight into the average standard of living in specified areas. Disposable per capita income measures the average income earned after taxes per person in a given area (city, state, country, etc.) in a specified year. It is calculated by dividing the area's total income after tax by its total population. Per capita expenditures, on the other hand, measures the average outlay for goods and services by person and provides insight into spending patterns across a given area.  Together, the assessment of per capita income versus expenditures can provide better understanding of regional economies, differences in standard of living, and approximate savings rates.
+
+This project involves exploring [Bureau of Economic Analysis](http://www.bea.gov/index.htm) data regarding [per capita disposable personal income](http://www.bea.gov/iTable/iTableHtml.cfm?reqid=70&step=30&isuri=1&7022=21&7023=0&7024=non-industry&7033=-1&7025=0&7026=00000,01000,02000,04000,05000,06000,08000,09000,10000,11000,12000,13000,15000,16000,17000,18000,19000,20000,21000,22000,23000,24000,25000,26000,27000,28000,29000,30000,31000,32000,33000,34000,35000,36000,37000,38000,39000,40000,41000,42000,44000,45000,46000,47000,48000,49000,50000,51000,53000,54000,55000,56000&7027=-1&7001=421&7028=53&7031=0&7040=-1&7083=levels&7029=23&7090=70) (hereafter referred to as PCI) and [per capita personal expenditures](http://www.bea.gov/iTable/iTableHtml.cfm?reqid=70&step=10&isuri=1&7003=2&7035=-1&7004=x&7005=1&7006=00000,01000,02000,04000,05000,06000,08000,09000,10000,11000,12000,13000,15000,16000,17000,18000,19000,20000,21000,22000,23000,24000,25000,26000,27000,28000,29000,30000,31000,32000,33000,34000,35000,36000,37000,38000,39000,40000,41000,42000,44000,45000,46000,47000,48000,49000,50000,51000,53000,54000,55000,56000&7036=-1&7001=62&7002=6&7090=70&7007=-1&7093=levels) (hereafter referred to as PCE). The PCI data provides annual (non-inflation adjusted) per capita disposable income at the national and state-level from 1948-2015 and the PCE data provides annual (non-inflation adjusted) per capita personal consumption expenditures at the national and state-level from 1997-2014. Consequently, this research seeks to identify how the national and state-level savings rates defined as $Savings = PCI - PCE$ has changed over time and by geographic location.
+
+The analysis finds that the savings rate has increased/decreased from XX% in 1997 to XX% in 2014. This was primarily driven by XXXX as disposable income has only grown by XX% while expenditures have grown by XX%.  Furthermore, we find that significant differences exist at the state level. *Add some more explanation here...*
+
+
+## Packages Required
+
+To reproduce the code and results throughout this project you will need to load the following packages.
+
+```{r, message=FALSE, warning=FALSE}
+library(rvest)        # scraping data
+library(tidyr)        # creating tidy data
+library(dplyr)        # transforming (joining, summarizing, etc.) data
+library(tibble)       # coercing data to tibbles
+library(magrittr)     # for piping capabilities
+library(DT)           # for printing nice HTML output tables
+library(ggplot2)      # visualizing data
+```
+
+
+## Data Preparation
+
+Prior to assessing how PCI, PCE, and savings rates have behaved over time and by geographic location we must acquire and clean the data.
+
+### Loading Data
+
+The data for this project originated from the following sources:
+
+- PCI data: [http://bit.ly/2dpEPY1](http://bit.ly/2dpEPY1) 
+- PCE data: [http://bit.ly/2dhC89U](http://bit.ly/2dhC89U)
+
+To identify the HTML link to scrape this data follow these steps:
+
+1. Go to the page displaying either the PCI or PCE data
+2. Right click the **Download** icon and select **Copy Link Address**
+3. Paste copied link into browser window
+4. Right click the **Download CSV File** icon and select **Copy Link Address**
+5. Use the copied link address as the URL to scrape
+
+
+```{r}
+#####################
+# download PCI data #
+#####################
+# url for PCI HTML table
+url_pci <- read_html("http://www.bea.gov/iTable/iTableHtml.cfm?reqid=70&step=30&isuri=1&7022=21&7023=0&7024=non-industry&7033=-1&7025=0&7026=00000,01000,02000,04000,05000,06000,08000,09000,10000,11000,12000,13000,15000,16000,17000,18000,19000,20000,21000,22000,23000,24000,25000,26000,27000,28000,29000,30000,31000,32000,33000,34000,35000,36000,37000,38000,39000,40000,41000,42000,44000,45000,46000,47000,48000,49000,50000,51000,53000,54000,55000,56000&7027=-1&7001=421&7028=53&7031=0&7040=-1&7083=levels&7029=23&7090=70")
+
+# download PCI table and extract the data frame from the list
+pci_raw <- url_pci %>%
+  html_nodes("table") %>%
+  .[2] %>%
+  html_table(fill = TRUE) %>%
+  .[[1]]
+
+#####################
+# download PCE data #
+#####################
+# url for PCE HTML table
+url_pce <- read_html("http://www.bea.gov/iTable/iTableHtml.cfm?reqid=70&step=10&isuri=1&7003=2&7035=-1&7004=x&7005=1&7006=00000,01000,02000,04000,05000,06000,08000,09000,10000,11000,12000,13000,15000,16000,17000,18000,19000,20000,21000,22000,23000,24000,25000,26000,27000,28000,29000,30000,31000,32000,33000,34000,35000,36000,37000,38000,39000,40000,41000,42000,44000,45000,46000,47000,48000,49000,50000,51000,53000,54000,55000,56000&7036=-1&7001=62&7002=6&7090=70&7007=-1&7093=levels")
+
+# download PCE table and extract the data frame from the list
+pce_raw <- url_pce %>%
+  html_nodes("table") %>%
+  .[2] %>%
+  html_table(fill = TRUE) %>%
+  .[[1]]
+
+```
+
+
+### Creating Tidy Data
+
+Once the basic data has been acquired we need to pre-process it to get the data into a [tidy format](http://vita.had.co.nz/papers/tidy-data.html). This includes removing punctuations, changing the income and expenditure data from character to a numeric data type, reducing the data sets to the same time period (1997-2014), making sure the common variables share the same names, and changing the data from a wide format to a long format.  Once this has been done for both the PCI and PCE data we can merge the clean data frames into one common data frame (*data_clean*) and create a new *Savings* variable.  I also remove the District of Columbia location since this is more comparable to metropolitan-level geographic areas than state-level geographic areas. We now have the data cleaned and ready to analyze.
+
+```{r, message=FALSE, warning=FALSE}
+
+# create tidy PCI data
+pci_clean <- pci_raw %>% 
+  apply(2, function(x) gsub("[[:punct:]]", "", x)) %>%
+  as_tibble(.) %>%
+  group_by(GeoFips, GeoName) %>%
+  mutate_each(funs(as.numeric)) %>%
+  ungroup() %>%
+  select(Fips = GeoFips, Location = GeoName, `1997`:`2014`) %>%
+  gather(Year, Income, -c(Fips, Location))
+
+
+# create tidy PCE data 
+pce_clean <- pce_raw %>% 
+  apply(2, function(x) gsub("[[:punct:]]", "", x)) %>%
+  as_tibble(.) %>%
+  group_by(Fips, Area) %>%
+  mutate_each(funs(as.numeric)) %>%
+  ungroup() %>%
+  rename(Location = Area) %>%
+  gather(Year, Expenditures, -c(Fips, Location))
+
+# create tidy merged data frame
+data_clean <- pci_clean %>%
+  left_join(pce_clean) %>%
+  mutate(Savings = Income - Expenditures,
+         Year = as.numeric(Year)) %>%
+  filter(Location != "District of Columbia")
+
+datatable(data_clean)
+```
+
+
+## Exploratory Data Analysis
+
+The primary purpose of this analysis is to assess how national and state-level PCI, PCE, and savings rates have changed over time and by geographic location. Thus, we will proceed by first assessing the national-level trends and then move on to assessing state-level trends.
+
+### National-Level Patterns
+
+At the national-level PCI grew by 79.6% from $22,536 in 1997 to $40,471 in 2014. Expenditures (PCE), on the other hand, grew 82.5% from $20,384 in 1997 to $37,186. So although we are assessing non-inflation adjusted dollars, since 1997 the rate of growth in PCE has outpaced PCI. Figure 1 illustrates the growing trend (not surprising since inflation has not been removed) and also captures the decrease in both PCI and PCE from 2008 to 2009 due to the [Great Recession](https://en.wikipedia.org/wiki/Great_Recession).
+
+```{r, warning=FALSE, message=FALSE, fig.align='center', fig.height=3.5, fig.width=8}
+data_clean %>%
+  filter(Location == "United States") %>%
+  ggplot(aes(x = Year)) +
+  geom_line(aes(y = Income, group = 1), color = "darkseagreen4") +
+  geom_line(aes(y = Expenditures, group = 1), color = "firebrick3") +
+  geom_ribbon(aes(ymin = Expenditures, ymax = Income, group = 1), fill = "darkseagreen1", alpha = .5) +
+  annotate("text", x = 2014.25, y = 40471, label = "2014 PCI: $40.5K", color = "darkseagreen4", hjust = 0, size = 2) +
+  annotate("text", x = 2014.25, y = 37196, label = "2014 PCE: $37.2K", color = "firebrick3", hjust = 0) +
+  annotate("text", x = 2014.25, y = 38833.5, label = "2014 Savings: $3.3K", color = "darkseagreen2", hjust = 0) +
+  scale_x_continuous(NULL, limits = c(1997, 2016), breaks = seq(1998, 2014, by = 4)) +
+  scale_y_continuous("Current Year Dollars", labels = scales::dollar) +
+  theme_minimal()
+```
+
+However, a closer look at just the savings rate ($Savings Rate = \frac{Savings}{Income}$) depicted in Figure 2 illustrates that no constant trend has been established. In other words, the aggregate per capita savings rate has not consistently increased or decreased year-over-year. Although a decreasing trend is present from 10% in 1998 to 6% in 2005, the national-level savings rate has since been fickle, peaking at 11% in 2012 before dipping back down to about 8% in recent years.  Bottom-line is that the national-level per capita savings rate has ranged between 6.5% and 10.9% with an average of 8.6%.
+
+```{r, warning=FALSE, message=FALSE, fig.align='center', fig.height=3.5, fig.width=8}
+data_clean %>%
+  filter(Location == "United States") %>%
+  mutate(Savings_Rate = Savings / Income) %>%
+  ggplot(aes(Year, Savings_Rate)) +
+  geom_line() +
+  geom_hline(aes(yintercept = mean(Savings_Rate)), linetype = "dashed", alpha = .5) +
+  scale_y_continuous(NULL, labels = scales::percent, limits = c(0, .115)) +
+  scale_x_continuous(NULL, breaks = seq(1998, 2014, by = 4)) +
+  labs("Figure 2: National-level Savings Rate") +
+  theme_minimal()
+```
+
+
+
+### State-Level Patterns
+
+
+
+
