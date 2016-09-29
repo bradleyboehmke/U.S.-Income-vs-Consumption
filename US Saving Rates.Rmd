@@ -159,6 +159,43 @@ data_clean %>%
 
 ### State-Level Patterns
 
+To get a quick undestanding of how U.S. states have progressed over the years we can map the savings rates over time. Figure 3 highlights a few attributes:
 
+1. Note how the earlier years have less diverging colors suggesting that there was more "equality" in the savings rates across the states; however, the latter year appear to have more disparity in the savings rate
+2. As the years have progressed it appears that agrowth in savings rates has been concentrated in the central states; primarily from the Dakotas down to Texas
+3. A few individual states stand out
+    - Main, Vermont & Montana for savings rates that are consistantly less than 0%
+    - Massachuchusetts for consistantly being a top savings rate state
+
+
+```{r, warning=FALSE, message=FALSE, fig.align='center', fig.width=9, fig.height=7}
+data_clean %>%
+  mutate(region = tolower(Location),
+         Savings_Rate = Savings / Income) %>%
+  right_join(map_data("state")) %>% 
+  select(-subregion) %>% 
+  filter(Year %in% seq(1998, 2014, by = 2)) %>%
+  ggplot(aes(x = long, y = lat, group = group)) +
+  geom_polygon(aes(fill = Savings_Rate)) +
+  facet_wrap(~ Year, ncol = 3) +
+  scale_fill_gradient2(name="Savings Rate", labels = scales::percent) +
+  ggtitle("Figure 3: Savings rate changes over time",
+       subtitle = "Temporal assessment of state-level savings rates (1998-2014)") +
+  expand_limits() +
+  theme_void() +
+  theme(strip.text.x = element_text(size = 12),
+        text = element_text(family = "Georgia"),
+        plot.title = element_text(size = 28, margin = margin(b = 10)),
+        plot.subtitle = element_text(size = 12, color = "darkslategrey", margin = margin(b = 25)))
+```
+
+
+
+
+Table with top and bottom 10 states
+
+
+
+plot savings growth over time - highlight states that have had greatest and weakest growth
 
 
