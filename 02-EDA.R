@@ -130,3 +130,53 @@ data_clean %>%
         plot.title = element_text(size = 28, margin = margin(b = 10)),
         plot.subtitle = element_text(size = 12, color = "darkslategrey", margin = margin(b = 25)))
 
+# Top 10 states
+savings_rate <- data_clean %>%
+  mutate(Savings_Rate = Savings / Income) %>%
+  filter(Year == 2014, Location != "United States") %>%
+  arrange(desc(Savings_Rate)) %>%
+  slice(1:10)
+
+savings_rate <- data_clean %>%
+  mutate(Savings_Rate = Savings / Income) %>%
+  filter(Location != "United States")
+
+top5 <- savings_rate %>%
+  arrange(desc(Savings_Rate)) %>%
+  filter(Year == 2014) %>%
+  slice(1:5)
+
+bottom5 <- savings_rate %>%
+  arrange(Savings_Rate) %>%
+  filter(Year == 2014) %>%
+  slice(1:5)
+
+ggplot(savings_rate, aes(Year, Savings_Rate, group = Location)) +
+  geom_line(alpha = .1) +
+  geom_line(data = filter(savings_rate, Location %in% top5$Location),
+            aes(Year, Savings_Rate, group = Location), color = "dodgerblue") +
+  geom_line(data = filter(savings_rate, Location %in% bottom5$Location),
+            aes(Year, Savings_Rate, group = Location), color = "red") +
+  geom_point(data = top5, aes(Year, Savings_Rate), color = "dodgerblue") +
+  geom_text(data = top5, aes(label = Location), hjust = 0, nudge_x = 0.2, size = 3) +
+  geom_point(data = bottom5, aes(Year, Savings_Rate), color = "red") +
+  geom_text(data = bottom5, aes(label = Location), hjust = 0, nudge_x = 0.2, size = 3) +
+  scale_x_continuous(NULL, limits = c(1997, 2015.25), breaks = seq(1998, 2014, by = 2)) +
+  scale_y_continuous(NULL, labels = scales::percent) +
+  ggtitle("Savings rate changes over time",
+          subtitle = "Temporal assessment of state-level savings rates (1997-2014)") +
+  theme_minimal() +
+  theme(panel.grid.minor = element_blank(),
+        text = element_text(family = "Georgia"),
+        plot.title = element_text(size = 28, margin = margin(b = 10)),
+        plot.subtitle = element_text(size = 12, color = "darkslategrey", margin = margin(b = 25)))
+
+
+# States with largest changes
+savings_rate %>%
+  filter(Year == 1997 | Year == 2014) %>%
+  select(Location, Year, Savings_Rate) %>%
+  spread(Year, Savings_Rate) %>%
+  mutate(Change = `2014` - `1997`) %>%
+  arrange(desc(abs(Change)))
+
