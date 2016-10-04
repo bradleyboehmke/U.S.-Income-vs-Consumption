@@ -5,6 +5,7 @@ library(tibble)       # coercing data to tibbles
 library(magrittr)     # for piping capabilities
 library(DT)           # for printing nice HTML output tables
 library(ggplot2)      # visualizing data
+library(ggrepel)      # Repel overlapping text labels in plots
 
 
 #####################
@@ -151,16 +152,24 @@ bottom5 <- savings_rate %>%
   filter(Year == 2014) %>%
   slice(1:5)
 
+avg <- savings_rate %>%
+  group_by(Year) %>%
+  summarise(Avg_mn = mean(Savings_Rate),
+            Avg_md = median(Savings_Rate)) %>%
+  mutate(Avg = "Average")
+
 ggplot(savings_rate, aes(Year, Savings_Rate, group = Location)) +
   geom_line(alpha = .1) +
   geom_line(data = filter(savings_rate, Location %in% top5$Location),
             aes(Year, Savings_Rate, group = Location), color = "dodgerblue") +
   geom_line(data = filter(savings_rate, Location %in% bottom5$Location),
             aes(Year, Savings_Rate, group = Location), color = "red") +
+  geom_line(data = avg, aes(Year, Avg_mn, group = 1), linetype = "dashed") +
+  annotate("text", x = 2014.25, y = .071, label = "Average", hjust = 0, size = 3) +
+  geom_text_repel(data = top5, aes(label = Location), nudge_x = .5, size = 3) +
   geom_point(data = top5, aes(Year, Savings_Rate), color = "dodgerblue") +
-  geom_text(data = top5, aes(label = Location), hjust = 0, nudge_x = 0.2, size = 3) +
+  geom_text_repel(data = bottom5, aes(label = Location), nudge_x = 0.5, size = 3) +
   geom_point(data = bottom5, aes(Year, Savings_Rate), color = "red") +
-  geom_text(data = bottom5, aes(label = Location), hjust = 0, nudge_x = 0.2, size = 3) +
   scale_x_continuous(NULL, limits = c(1997, 2015.25), breaks = seq(1998, 2014, by = 2)) +
   scale_y_continuous(NULL, labels = scales::percent) +
   ggtitle("Savings rate changes over time",
@@ -179,4 +188,17 @@ savings_rate %>%
   spread(Year, Savings_Rate) %>%
   mutate(Change = `2014` - `1997`) %>%
   arrange(desc(abs(Change)))
+
+# is there a common theme for what drives
+changes <- data_clean %>%
+  filter(Location != "United States", Year == 1997 | Year == 2014) %>%
+  arrange(Location) %>%
+  select(Location, Year, Income, Expenditures) %>%
+  group_by(Location) %>%
+  mutate(Inc_Chg = diff(Income) / lag(Income),
+         Exp_Chg = diff(Expenditures) / lag(Expenditures),
+         ratio = Inc_Chg / Exp_Chg) %>%
+  na.omit() %>%
+  arrange(desc(ratio))
+
 
