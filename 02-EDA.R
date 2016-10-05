@@ -201,4 +201,36 @@ changes <- data_clean %>%
   na.omit() %>%
   arrange(desc(ratio))
 
+# difference in PCE & PCI growth rates for above vs below avg saving rate states
+changes <- savings_rate %>%
+  filter(Year == 1997 | Year == 2014) %>%
+  arrange(Location) %>%
+  select(Location, Year, Income, Expenditures, Savings_Rate) %>%
+  group_by(Location) %>%
+  mutate(PCI = diff(Income) / lag(Income),
+         PCE = diff(Expenditures) / lag(Expenditures)) %>%
+  na.omit() %>%
+  ungroup() %>%
+  mutate(Group = ifelse(Savings_Rate > mean(Savings_Rate), "Above Average", "Below Average")) %>%
+  gather(Metric, Value, PCI:PCE)
+
+
+ggplot(changes, aes(Metric, Value)) +
+  geom_boxplot(outlier.shape = NA) +
+  geom_jitter(width = .1, alpha = .5) +
+  geom_text(data = filter(changes, Value > 1.1 | Value < .6), aes(label = Location), size = 3, hjust = 0) +
+  facet_wrap(~ Group) +
+  scale_y_continuous("Percent change from 1997 to 2014", labels = scales::percent) +
+  xlab(NULL) +
+  ggtitle("Figure 5: Percent change in PCE & PCI",
+          subtitle = "Comparing the change in PCE & PCI from 1997 to 2014 for those states with above versus below average savings rates") +
+  theme_bw() +
+  theme(panel.grid.minor = element_blank(),
+        text = element_text(family = "Georgia", size = 12), 
+        strip.text.x = element_text(size = 14),
+        plot.title = element_text(size = 28, margin = margin(b = 10)),
+        plot.subtitle = element_text(size = 12, color = "darkslategrey", margin = margin(b = 25)))
+  
+
+
 
