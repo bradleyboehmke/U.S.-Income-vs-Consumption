@@ -6,6 +6,7 @@ library(magrittr)     # for piping capabilities
 library(DT)           # for printing nice HTML output tables
 library(ggplot2)      # visualizing data
 library(ggrepel)      # Repel overlapping text labels in plots
+library(plotly)
 
 
 #####################
@@ -232,21 +233,28 @@ ggplot(changes, aes(Metric, Value)) +
         plot.subtitle = element_text(size = 12, color = "darkslategrey", margin = margin(b = 25)))
   
 
-# ggplotly map of 2014 savings by state
-g <- data_clean %>%
+# plotly map of 2014 savings by state
+df <- data_clean %>%
+  filter(Location != "United States", Year == 2014) %>%
   mutate(region = tolower(Location),
-         Savings_Rate = Savings / Income) %>%
-  right_join(map_data("state")) %>% 
-  select(-subregion) %>% 
-  filter(Year == 2014) %>%
-  ggplot(aes(x = long, y = lat, group = group)) +
-  geom_polygon(aes(fill = Savings_Rate)) +
-  scale_fill_gradient2(name="Savings Rate", labels = scales::percent) +
-  expand_limits() +
-  theme_void() +
-  theme(strip.text.x = element_text(size = 12),
-        text = element_text(family = "Georgia"),
-        plot.title = element_text(size = 28, margin = margin(b = 10)),
-        plot.subtitle = element_text(size = 12, color = "darkslategrey", margin = margin(b = 25)))
+         Savings_Rate = round(Savings / Income * 100, 2),
+         Code = state.abb)
+  
+g <- list(
+  scope = 'usa',
+  projection = list(type = 'albers usa'),
+  lakecolor = toRGB('white')
+)
 
-ggplotly(g)
+plot_geo(df, locationmode = 'USA-states') %>%
+  add_trace(
+    z = ~Savings_Rate, text = ~Location,
+    locations = ~Code, colors = "Purples"
+  ) %>%
+  colorbar(title = 'Savings Rate (%)', len = .4, thickness = 20, xpad = 0, ypad = 0, x = 1.05, ticksuffix = '%') %>%
+  layout(
+    title = paste(unique(df$Year), 'Saving Rates by State<br>(Hover for breakdown)'),
+    geo = g
+  )
+  
+

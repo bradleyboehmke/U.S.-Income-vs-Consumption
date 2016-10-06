@@ -2,11 +2,11 @@
 title: "U.S. Savings Rates"
 output: 
   flexdashboard::flex_dashboard:
-    orientation: rows
+    orientation: columns
     vertical_layout: fill
     social: menu
     source_code: https://github.com/bradleyboehmke/learningCurve-shiny-app
-    theme: simplex
+    theme: journal
 runtime: shiny
 ---
 
@@ -79,11 +79,9 @@ data_clean <- pci_clean %>%
   left_join(pce_clean) %>%
   mutate(Savings = Income - Expenditures,
          Year = as.numeric(Year)) %>%
-  filter(Location != "District of Columbia") %>%
+  filter(Location != "United States", Location != "District of Columbia") %>%
   mutate(region = tolower(Location),
-         Savings_Rate = Savings / Income) %>%
-  right_join(map_data("state")) %>% 
-  select(-subregion)
+         Savings_Rate = Savings / Income)
 ```
 
 Sidebar {.sidebar}
@@ -95,10 +93,12 @@ Sidebar {.sidebar}
 
 
 
-sliderInput("year", "Year:",
+sliderInput("year", "Select Year:",
     min = 1997, max = 2014, value = 2014, step = 1, ticks = FALSE, sep = ""
   )
 
+selectInput("state", "Select State:", unique(data_clean$Location),
+            selected = "Ohio")
 
 ```
 
@@ -114,50 +114,65 @@ Application author: [Bradley Boehmke](http://bradleyboehmke.github.io/)
 Explore Savings Rates
 ======================================================================
 
-Row
+Column {data-width=650}
 -----------------------------------------------------------------------
 
-### Map of State-level Savings Rates
+### Map of State-level Savings Rates {data-width=600}
 
 ```{r}
 map_data <- reactive({
   data_clean %>%
-    filter(Year == input$year)
+    filter(Year == input$year) %>%
+  mutate(region = tolower(Location),
+         Savings_Rate = round(Savings / Income * 100, 2),
+         Code = state.abb)
 })
 
-output$map <- renderPlotly({
-  p <- ggplot(map_data(), aes(x = long, y = lat, group = group)) +
-  geom_polygon(aes(fill = Savings_Rate)) +
-  facet_wrap(~ Year, ncol = 3) +
-  scale_fill_gradient2(NULL, labels = scales::percent) +
-  expand_limits() +
-  theme_void() +
-  theme(strip.text.x = element_text(size = 12),
-        text = element_text(family = "Georgia"),
-        plot.title = element_text(size = 28, margin = margin(b = 10)),
-        plot.subtitle = element_text(size = 12, color = "darkslategrey", margin = margin(b = 25)))
-  
-  g <- ggplotly(p)
+renderPlotly({
+g <- list(
+  scope = 'usa',
+  projection = list(type = 'albers usa'),
+  showlakes = TRUE,
+  lakecolor = toRGB('white')
+)
+
+plot_geo(map_data(), locationmode = 'USA-states') %>%
+  add_trace(
+    z = ~Savings_Rate, text = ~Location,
+    locations = ~Code, colors = "Purples"
+  ) %>%
+  colorbar(title = 'Savings Rate', len = .5, thickness = 20, xpad = 0, ypad = 0, x = 1.05, ticksuffix = '%') %>%
+  layout(
+    title = paste(input$year, 'Savings Rates (%) by State<br>(Hover for breakdown)'),
+    geo = g
+  )
 })
 
-
-plotlyOutput('map', width = "100%")
 ```
 
 
-
-
-
-Row
------------------------------------------------------------------------
-
 ### Savings Rate Trends
 
+```{r}
+plot_data <- reactive({
+  data_clean %>%
+    filter(Location == input$state)
+})
+
+renderPlot(
+
+  ggplot(data_clean, aes(Year, Savings_Rate, group = Location)) +
+  geom_line(alpha = .1) +
+  theme_minimal()
+)
+
+```
 
 
+Column {data-width=350}
+-----------------------------------------------------------------------
 
-
-### Underlying Data
+### Underlying Data {data-width=400}
 
 
 
@@ -169,13 +184,23 @@ About
 
 <h2> Savings Rates </h2>
 
+<br>
+
 Per capita income and expenditures provide crucial insight into the average standard of living in specified areas. Disposable per capita income measures the average income earned after taxes per person in a given area (city, state, country, etc.) in a specified year. It is calculated by dividing the area's total income after tax by its total population. Per capita expenditures, on the other hand, measures the average outlay for goods and services by person and provides insight into spending patterns across a given area.  Together, the assessment of per capita income versus expenditures can provide better understanding of regional economies, differences in standard of living, and approximate savings rates.
 
-This project involves exploring [Bureau of Economic Analysis](http://www.bea.gov/index.htm) data regarding [per capita disposable income](http://www.bea.gov/iTable/iTableHtml.cfm?reqid=70&step=30&isuri=1&7022=21&7023=0&7024=non-industry&7033=-1&7025=0&7026=00000,01000,02000,04000,05000,06000,08000,09000,10000,11000,12000,13000,15000,16000,17000,18000,19000,20000,21000,22000,23000,24000,25000,26000,27000,28000,29000,30000,31000,32000,33000,34000,35000,36000,37000,38000,39000,40000,41000,42000,44000,45000,46000,47000,48000,49000,50000,51000,53000,54000,55000,56000&7027=-1&7001=421&7028=53&7031=0&7040=-1&7083=levels&7029=23&7090=70) (hereafter referred to as PCI) and [per capita personal expenditures](http://www.bea.gov/iTable/iTableHtml.cfm?reqid=70&step=10&isuri=1&7003=2&7035=-1&7004=x&7005=1&7006=00000,01000,02000,04000,05000,06000,08000,09000,10000,11000,12000,13000,15000,16000,17000,18000,19000,20000,21000,22000,23000,24000,25000,26000,27000,28000,29000,30000,31000,32000,33000,34000,35000,36000,37000,38000,39000,40000,41000,42000,44000,45000,46000,47000,48000,49000,50000,51000,53000,54000,55000,56000&7036=-1&7001=62&7002=6&7090=70&7007=-1&7093=levels) (hereafter referred to as PCE). The PCI data provides annual (non-inflation adjusted) per capita disposable income at the national and state-level from 1948-2015 and the PCE data provides annual (non-inflation adjusted) per capita personal consumption expenditures at the national and state-level from 1997-2014. Consequently, this research looks at how state-level savings rates defined as $Savings = PCI - PCE$ has changed over time and by geographic location.
+<br><br><br>
+
+This project involves exploring [Bureau of Economic Analysis](http://www.bea.gov/index.htm) data regarding [per capita disposable income]() (hereafter referred to as PCI) and [per capita personal expenditures]() (hereafter referred to as PCE). The PCI data provides annual (non-inflation adjusted) per capita disposable income at the national and state-level from 1948-2015 and the PCE data provides annual (non-inflation adjusted) per capita personal consumption expenditures at the national and state-level from 1997-2014. Consequently, this research looks at how state-level savings rates defined as $Savings = PCI - PCE$ has changed over time and by geographic location.
+
+<br><br><br>
 
 The [analysis](https://rpubs.com/bradleyboehmke/final_project_example) finds that the national-level and average state-level savings rates have remained around 7-8% since 1997. Furthermore, we find that American's are not making fundamental shifts in their earnings and expenditure rates. However, the analysis does uncover a noticable shift in the disparity of savings rates across the states in recent years with much of the growth in savings rates being concentrated in the central U.S. states - from the Dakotas down to Oklahoma, Texas and Louisiana. Consequently, it appears that the often neglected fly-over states offer Americans greater opportunities to save than the eastern and western states.
 
+<br><br>
+
 <h3> Colophon </h3>
+
+<br>
 
 This app was made by [Brad Boehmke](http://bradleyboehmke.github.io). The application was built with the [Shiny](http://shiny.rstudio.com) framework for the [R programming language](https://www.r-project.org/). The layout was produced with the [flexdashboard](http://rstudio.github.io/flexdashboard/index.html) package, and the charts and tables use [ggplot2](http://ggplot2.org/), [Plotly](http://plot.ly), and [DataTables](https://rstudio.github.io/DT/), all accessed through their corresponding R packages.  Code is available on [GitHub](https://github.com/bradleyboehmke/learningCurve-shiny-app) licensed MIT. Suggestions and criticism welcome: [bradleyboehmke@gmail.com](mailto:bradleyboehmke.com).
 
