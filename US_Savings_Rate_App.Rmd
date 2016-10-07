@@ -5,7 +5,7 @@ output:
     orientation: columns
     vertical_layout: fill
     social: menu
-    source_code: https://github.com/bradleyboehmke/learningCurve-shiny-app
+    source_code: https://github.com/bradleyboehmke/U.S.-Income-vs-Consumption
     theme: journal
 runtime: shiny
 ---
@@ -87,26 +87,23 @@ data_clean <- pci_clean %>%
 Sidebar {.sidebar}
 ======================================================================
 
+Explore how state-level savings rates have changed over time and by geographic location. Read more behind this project and what defines savings rates on the __About__ tab.
+
+<br>
+
 ```{r}
-
-# Define inputs
-
-
-
-sliderInput("year", "Select Year:",
+sliderInput("year", "Select the year to update the map and rank-order table:",
     min = 1997, max = 2014, value = 2014, step = 1, ticks = FALSE, sep = ""
   )
-
-selectInput("state", "Select State:", unique(data_clean$Location),
-            selected = "Ohio")
-
 ```
 
 <br>
 
-Use the __Explore Savings Rates__ tab to explore how states have differed .  
+```{r}
 
-To learn more click the __About__ tab.  
+selectInput("state", "Select the state to highlight the historical trend in the temporal plot:", unique(data_clean$Location),
+            selected = "Ohio")
+```
 
 Application author: [Bradley Boehmke](http://bradleyboehmke.github.io/)
 
@@ -156,14 +153,28 @@ plot_geo(map_data(), locationmode = 'USA-states') %>%
 ```{r}
 plot_data <- reactive({
   data_clean %>%
-    filter(Location == input$state)
+    filter(Location == input$state) %>%
+    mutate(Label = paste0(round(Savings_Rate * 100, 2), "%"))
+})
+
+plot_label <- reactive({
+  plot_data() %>%
+    filter(Year == input$year)
 })
 
 renderPlot(
 
   ggplot(data_clean, aes(Year, Savings_Rate, group = Location)) +
-  geom_line(alpha = .1) +
-  theme_minimal()
+    geom_line(alpha = .1) +
+    geom_line(data = plot_data(), aes(Year, Savings_Rate), color = "dodgerblue") +  
+    geom_text(data = plot_label(), aes(label = Label), hjust = 0, vjust = 0, nudge_y = .01) +
+    scale_y_continuous(NULL, labels = scales::percent) +
+    scale_x_continuous(NULL, limits = c(1997, 2015), breaks = seq(1998, 2014, by = 4), expand = c(0, 0.25)) +
+    theme_minimal() +
+    theme(
+      panel.grid.minor = element_blank(),
+      axis.text = element_text(size = 12)
+      )
 )
 
 ```
@@ -172,8 +183,31 @@ renderPlot(
 Column {data-width=350}
 -----------------------------------------------------------------------
 
-### Underlying Data {data-width=400}
+### Rank-order for Selected Year {data-width=400}
 
+```{r}
+
+table_data <- reactive({
+  data_clean %>%
+    filter(Year == input$year) %>%
+    mutate(Savings_Rate = Savings / Income) %>%
+    arrange(desc(Savings_Rate)) %>%
+    mutate(Label = paste0(round(Savings_Rate * 100, 2), "%"),
+           Rank = dense_rank(desc(Savings_Rate))) %>%
+    select(Rank, State = Location, `Savings Rate` = Label)
+})
+
+renderDataTable(
+    datatable(table_data(), rownames = FALSE, 
+              options = list(pageLength = 10,
+                             lengthMenu = c(5, 10, 15, 25, 50),
+                             columnDefs = list(list(className = 'dt-center', targets = 0),
+                                               list(className = 'dt-right', targets = 2)))
+              )
+  
+)
+
+```
 
 
 
@@ -184,25 +218,20 @@ About
 
 <h2> Savings Rates </h2>
 
-<br>
 
 Per capita income and expenditures provide crucial insight into the average standard of living in specified areas. Disposable per capita income measures the average income earned after taxes per person in a given area (city, state, country, etc.) in a specified year. It is calculated by dividing the area's total income after tax by its total population. Per capita expenditures, on the other hand, measures the average outlay for goods and services by person and provides insight into spending patterns across a given area.  Together, the assessment of per capita income versus expenditures can provide better understanding of regional economies, differences in standard of living, and approximate savings rates.
 
-<br><br><br>
 
-This project involves exploring [Bureau of Economic Analysis](http://www.bea.gov/index.htm) data regarding [per capita disposable income]() (hereafter referred to as PCI) and [per capita personal expenditures]() (hereafter referred to as PCE). The PCI data provides annual (non-inflation adjusted) per capita disposable income at the national and state-level from 1948-2015 and the PCE data provides annual (non-inflation adjusted) per capita personal consumption expenditures at the national and state-level from 1997-2014. Consequently, this research looks at how state-level savings rates defined as $Savings = PCI - PCE$ has changed over time and by geographic location.
+This project involves exploring [Bureau of Economic Analysis](http://www.bea.gov/index.htm) data regarding [per capita disposable income](http://bit.ly/2dpEPY1) (PCI) and [per capita personal expenditures](http://bit.ly/2dhC89U) (PCE). The PCI data provides annual (non-inflation adjusted) per capita disposable income at the national and state-level from 1948-2015 and the PCE data provides annual (non-inflation adjusted) per capita personal consumption expenditures at the national and state-level from 1997-2014. Consequently, this project looks at how state-level savings rates defined as $Savings = PCI - PCE$ has changed over time and by geographic location.
 
-<br><br><br>
 
-The [analysis](https://rpubs.com/bradleyboehmke/final_project_example) finds that the national-level and average state-level savings rates have remained around 7-8% since 1997. Furthermore, we find that American's are not making fundamental shifts in their earnings and expenditure rates. However, the analysis does uncover a noticable shift in the disparity of savings rates across the states in recent years with much of the growth in savings rates being concentrated in the central U.S. states - from the Dakotas down to Oklahoma, Texas and Louisiana. Consequently, it appears that the often neglected fly-over states offer Americans greater opportunities to save than the eastern and western states.
+More detailed [analysis](https://rpubs.com/bradleyboehmke/final_project_example) found that the national-level and average state-level savings rates have remained around 7-8% since 1997. Furthermore, American's have not experienced fundamental shifts in their earnings and expenditure rates. However, increased disparity of savings rates across the states hase been experienced in recent years with much of the growth in savings rates being concentrated in the central U.S. states - from the Dakotas down to Oklahoma, Texas and Louisiana. Consequently, it appears that the often neglected fly-over states offer Americans greater opportunities to save than the eastern and western states.
 
-<br><br>
 
 <h3> Colophon </h3>
 
-<br>
 
-This app was made by [Brad Boehmke](http://bradleyboehmke.github.io). The application was built with the [Shiny](http://shiny.rstudio.com) framework for the [R programming language](https://www.r-project.org/). The layout was produced with the [flexdashboard](http://rstudio.github.io/flexdashboard/index.html) package, and the charts and tables use [ggplot2](http://ggplot2.org/), [Plotly](http://plot.ly), and [DataTables](https://rstudio.github.io/DT/), all accessed through their corresponding R packages.  Code is available on [GitHub](https://github.com/bradleyboehmke/learningCurve-shiny-app) licensed MIT. Suggestions and criticism welcome: [bradleyboehmke@gmail.com](mailto:bradleyboehmke.com).
+This app was made by [Brad Boehmke](http://bradleyboehmke.github.io). The application was built with the [Shiny](http://shiny.rstudio.com) framework for the [R programming language](https://www.r-project.org/). The layout was produced with the [flexdashboard](http://rstudio.github.io/flexdashboard/index.html) package, and the charts and tables use [ggplot2](http://ggplot2.org/), [Plotly](http://plot.ly), and [DataTables](https://rstudio.github.io/DT/), all accessed through their corresponding R packages.  Code is available on [GitHub](https://github.com/bradleyboehmke/U.S.-Income-vs-Consumption) licensed MIT. Suggestions and criticism welcome: [bradleyboehmke@gmail.com](mailto:bradleyboehmke.com).
 
 <br>
 <br>

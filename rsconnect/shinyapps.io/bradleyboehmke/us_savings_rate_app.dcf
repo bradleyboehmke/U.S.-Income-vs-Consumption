@@ -1,0 +1,10 @@
+name: us_savings_rate_app
+title: US Savings Rate App
+account: bradleyboehmke
+server: shinyapps.io
+appId: 130206
+bundleId: 579792
+url: https://bradleyboehmke.shinyapps.io/us_savings_rate_app/
+when: 1475865156.05194
+asMultiple: FALSE
+asStatic: FALSE
